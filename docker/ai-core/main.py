@@ -8,4 +8,4 @@ def root():
 
 @app.get("/motivate")
 def motivate():
-    return {"quote": "Success is built one system at a time."}
+    return {"quote": "Success is built one iteration at a time."}
