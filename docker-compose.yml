@@ -7,9 +7,9 @@ services:
     build:
       context: ./docker/api-gateway
       dockerfile: Dockerfile
-    container_name: api-gateway
     ports:
       - "8080:8080"
+
     depends_on:
       - ai-core
       - r-analytics
