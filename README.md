@@ -85,12 +85,12 @@ api-gateway → postgres:5432
 ┌──────────────────────────────────────────────────────────────┐
 │                          Databricks                          │
 │--------------------------------------------------------------│
-│ 1️⃣ Data Ingestion    – From PostgreSQL / APIs / CSV / Streams│
-│ 2️⃣ Data Cleaning     – PySpark + Delta Lake                  │
-│ 3️⃣ Feature Eng.      – MLflow + Notebooks                    │
-│ 4️⃣ Model Training    – Train / Evaluate / Deploy             │
-│ 5️⃣ Model Registry    – Version control for ML models         |
-└──────────────────────────────────────────────────────────────┘
+│ 1️  Data Ingestion    – From PostgreSQL / APIs / CSV / Streams│
+│ 2️  Data Cleaning     – PySpark + Delta Lake                  │
+│ 3️  Feature Eng.      – MLflow + Notebooks                    │
+│ 4️  Model Training    – Train / Evaluate / Deploy             │
+│ 5️  Model Registry    – Version control for ML models         |
+───────────────────────────────────────────────────────────────┘
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────┐
