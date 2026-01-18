@@ -1,6 +1,11 @@
 # iAssist-platform
 Cloud-ready, AI + Data Infrastructure powered by GitHub + Docker + Databricks + Spark + MLflow + Airflow, designed for ML pipelines, data science, and LLM training
 
+++++++++++++++++++++++++++++++++++++
++VIEW IN RAW FORMAT FOR READABILITY+
+++++++++++++++++++++++++++++++++++++
+
+
 1. Core Modular Architecture (High-Level Overview)
 +---------------------------------------------------------------+
 |                        iAssist Platform                       |
