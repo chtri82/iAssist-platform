@@ -13,7 +13,7 @@ jdbc_url = "jdbc:postgresql://postgres:5432/iassist"
 props = {"user": "admin", "password": "secret", "driver": "org.postgresql.Driver"}
 users = spark.read.jdbc(url=jdbc_url, table="users", properties=props)
 
-# Simple transform
+# transform
 clean = users.withColumn("name_upper", col("name").upper())
 clean.show()
 
@@ -30,4 +30,6 @@ with mlflow.start_run():
     acc = model.score(X_test, y_test)
     mlflow.log_metric("accuracy", acc)
     mlflow.sklearn.log_model(model, "model")
-    print(f"Model trained: Accuracy = {acc}")
+    print(f"-------------------------------")
+    print(f"Model Training Accuracy = {acc}")
+    print(f"-------------------------------")

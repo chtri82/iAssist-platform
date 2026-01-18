@@ -1,7 +1,9 @@
-
 library(plumber)
+library(jsonlite)
 
-#* @get /forecast
-function() {
-  list(predicted_growth = runif(1, min = 0.1, max = 0.9))
+#* @post /forecast
+function(req, res) {
+  input <- fromJSON(req$postBody)
+  forecast <- paste("Predicted value for input", input$value, "is", input$value * 2)
+  list(result = forecast)
 }

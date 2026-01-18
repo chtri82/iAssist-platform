@@ -1,52 +1,5 @@
-# iAssist Platform - Windows + Docker Desktop v5 compatible
-# Fixed for proper cross-platform path handling
 
 services:
-  # ===================== API Gateway (.NET 8) =====================
-  api-gateway:
-    build:
-      context: ./docker/api-gateway
-      dockerfile: Dockerfile
-    container_name: api-gateway
-    ports:
-      - "8080:8080"
-    depends_on:
-      - ai-core
-      - r-analytics
-      - postgres
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      PYTHON_SERVICE_URL: http://ai-core:5000
-      R_ANALYTICS_URL: http://r-analytics:8000
-      DB_CONNECTION: Host=postgres;Port=5432;Database=iassist;Username=admin;Password=secret
-    networks:
-      - iassist-net
-
-  # ===================== AI Core (Python + FastAPI) =====================
-  ai-core:
-    build:
-      context: ./docker/ai-core
-      dockerfile: Dockerfile
-    container_name: ai-core
-    ports:
-      - "5000:5000"
-    environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-test_key_placeholder}
-    networks:
-      - iassist-net
-
-  # ===================== R Analytics (R + Plumber) =====================
-  r-analytics:
-    build:
-      context: ./docker/r-analytics
-      dockerfile: Dockerfile
-    container_name: r-analytics
-    ports:
-      - "8000:8000"
-    networks:
-      - iassist-net
-
-  # ===================== PostgreSQL Database =====================
   postgres:
     image: postgres:16
     container_name: postgres
@@ -59,15 +12,46 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      # ✅ Using relative path (works on Windows + Linux)
       - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - iassist-net
 
-# ===================== Network + Volumes =====================
+  ai-core:
+    build:
+      context: ./docker/ai-core
+      dockerfile: Dockerfile
+    container_name: ai-core
+    ports:
+      - "5000:5000"
+    networks:
+      - iassist-net
+
+  r-analytics:
+    build:
+      context: ./docker/r-analytics
+      dockerfile: Dockerfile
+    container_name: r-analytics
+    ports:
+      - "8000:8000"
+    networks:
+      - iassist-net
+
+  api-gateway:
+    build:
+      context: ./docker/api-gateway/iAssist.ApiGateway
+      dockerfile: ../Dockerfile
+    container_name: api-gateway
+    depends_on:
+      - ai-core
+      - r-analytics
+      - postgres
+    ports:
+      - "8080:8080"
+    networks:
+      - iassist-net
+
 networks:
   iassist-net:
-    driver: bridge
 
 volumes:
   db_data:
