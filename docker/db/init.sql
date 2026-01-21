@@ -1,8 +1,10 @@
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100),
-  email VARCHAR(150) UNIQUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS results (
+    id SERIAL PRIMARY KEY,
+    service VARCHAR(50),
+    input_data TEXT,
+    output_data TEXT,
+    created_on TIMESTAMP DEFAULT NOW()
 );
 
-INSERT INTO users (name, email) VALUES ('Test User', 'test@iassist.ai');
+INSERT INTO results (service, input_data, output_data)
+VALUES ('system', 'init', 'Database initialized successfully');
