@@ -129,3 +129,4 @@ api-gateway → postgres:5432
 
 6. Optional: Scalable Cloud Deployment (Next Phase)
 
+
