@@ -1,5 +1,27 @@
-
 services:
+  # ---------- AI Core ----------
+  ai-core:
+    build:
+      context: ./docker/ai-core
+      dockerfile: Dockerfile
+    container_name: ai-core
+    ports:
+      - "5000:5000"
+    networks:
+      - iassist-net
+
+  # ---------- R Analytics ----------
+  r-analytics:
+    build:
+      context: ./docker/r-analytics
+      dockerfile: Dockerfile
+    container_name: r-analytics
+    ports:
+      - "8000:8000"
+    networks:
+      - iassist-net
+
+  # ---------- PostgreSQL ----------
   postgres:
     image: postgres:16
     container_name: postgres
@@ -16,30 +38,11 @@ services:
     networks:
       - iassist-net
 
-  ai-core:
-    build:
-      context: ./docker/ai-core
-      dockerfile: Dockerfile
-    container_name: ai-core
-    ports:
-      - "5000:5000"
-    networks:
-      - iassist-net
-
-  r-analytics:
-    build:
-      context: ./docker/r-analytics
-      dockerfile: Dockerfile
-    container_name: r-analytics
-    ports:
-      - "8000:8000"
-    networks:
-      - iassist-net
-
+  # ---------- API Gateway (.NET) ----------
   api-gateway:
     build:
-      context: ./docker/api-gateway/iAssist.ApiGateway
-      dockerfile: ../Dockerfile
+      context: ./docker/api-gateway
+      dockerfile: Dockerfile
     container_name: api-gateway
     depends_on:
       - ai-core
@@ -50,8 +53,12 @@ services:
     networks:
       - iassist-net
 
+# ---------- Network ----------
 networks:
   iassist-net:
+    driver: bridge
 
+# ---------- Volumes ----------
 volumes:
   db_data:
+    name: iassist-platform_db_data

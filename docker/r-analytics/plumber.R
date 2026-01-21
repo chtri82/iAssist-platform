@@ -7,3 +7,4 @@ function(req, res) {
   forecast <- paste("Predicted value for input", input$value, "is", input$value * 2)
   list(result = forecast)
 }
+
