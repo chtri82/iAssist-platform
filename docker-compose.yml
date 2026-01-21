@@ -9,7 +9,7 @@ services:
       - "5000:5000"
     networks:
       - iassist-net
-
+      
   # ---------- R Analytics ----------
   r-analytics:
     build:
@@ -52,13 +52,32 @@ services:
       - "8080:8080"
     networks:
       - iassist-net
+      
+  # ---------- Data Pipelines ----------
+  pipelines:
+    build:
+      context: ./docker/pipelines
+      dockerfile: Dockerfile
+    container_name: data-pipelines
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: iassist
+      DATABRICKS_TOKEN: ${DATABRICKS_TOKEN}
+      DATABRICKS_URL: ${DATABRICKS_URL}
+      DATABRICKS_JOBID: ${DATABRICKS_JOBID}
+    networks:
+      - iassist-net
 
-# ---------- Network ----------
 networks:
   iassist-net:
+    name: iassist-platform_iassist-net
     driver: bridge
 
-# ---------- Volumes ----------
 volumes:
   db_data:
     name: iassist-platform_db_data

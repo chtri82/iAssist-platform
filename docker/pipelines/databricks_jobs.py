@@ -3,6 +3,7 @@ import requests
 
 DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN")
 DATABRICKS_URL = os.getenv("DATABRICKS_URL", "https://<your-workspace>.cloud.databricks.com")
+DATABRICKS_JOBID = os.getenv("DATABRICKS_JOBID")    
 
 def trigger_databricks_job(job_id):
     """Trigger Databricks job via REST API"""
@@ -18,4 +19,4 @@ def trigger_databricks_job(job_id):
         print(f"❌ Failed to trigger job: {response.text}")
 
 if __name__ == "__main__":
-    trigger_databricks_job("<YOUR_JOB_ID>")
+    trigger_databricks_job(DATABRICKS_JOBID)
