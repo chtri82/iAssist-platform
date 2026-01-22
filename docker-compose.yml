@@ -1,35 +1,90 @@
 services:
-  # ---------- AI Core ----------
+  # ==============================
+  # 🧠 AI Core (Python FastAPI)
+  # ==============================
   ai-core:
     build:
       context: ./docker/ai-core
       dockerfile: Dockerfile
     container_name: ai-core
+    restart: always
     ports:
       - "5000:5000"
+    env_file:
+      - ./config.env
     networks:
       - iassist-net
-      
-  # ---------- R Analytics ----------
+    depends_on:
+      - postgres
+
+  # ==============================
+  # 📊 R Analytics (Plumber API)
+  # ==============================
   r-analytics:
     build:
       context: ./docker/r-analytics
       dockerfile: Dockerfile
     container_name: r-analytics
+    restart: always
     ports:
       - "8000:8000"
+    env_file:
+      - ./config.env
+    networks:
+      - iassist-net
+    depends_on:
+      - postgres
+
+  # ==============================
+  # ⚙️ API Gateway (.NET 9)
+  # ==============================
+  api-gateway:
+    build:
+      context: ./docker/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./config.env
+    depends_on:
+      - ai-core
+      - r-analytics
+      - postgres
     networks:
       - iassist-net
 
-  # ---------- PostgreSQL ----------
+  # ==============================
+  # 🧮 ETL / Pipelines
+  # ==============================
+  pipelines:
+    build:
+      context: ./docker/pipelines
+      dockerfile: Dockerfile
+    container_name: pipelines
+    restart: on-failure
+    command: ["python", "etl_job.py"]
+    env_file:
+      - ./config.env
+    depends_on:
+      - postgres
+    networks:
+      - iassist-net
+
+  # ==============================
+  # 🗄️ Postgres Database
+  # ==============================
   postgres:
     image: postgres:16
     container_name: postgres
     restart: always
+    env_file:
+      - ./config.env
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: iassist
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -38,46 +93,38 @@ services:
     networks:
       - iassist-net
 
-  # ---------- API Gateway (.NET) ----------
-  api-gateway:
+  # ==============================
+  # 🧭 Airflow (Automation & Scheduling)
+  # ==============================
+  airflow:
     build:
-      context: ./docker/api-gateway
+      context: ./docker/airflow
       dockerfile: Dockerfile
-    container_name: api-gateway
-    depends_on:
-      - ai-core
-      - r-analytics
-      - postgres
-    ports:
-      - "8080:8080"
-    networks:
-      - iassist-net
-      
-  # ---------- Data Pipelines ----------
-  pipelines:
-    build:
-      context: ./docker/pipelines
-      dockerfile: Dockerfile
-    container_name: data-pipelines
-    depends_on:
-      - postgres
+    container_name: airflow
+    restart: always
+    env_file:
+      - ./config.env
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secret
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: iassist
-      DATABRICKS_TOKEN: ${DATABRICKS_TOKEN}
-      DATABRICKS_URL: ${DATABRICKS_URL}
-      DATABRICKS_JOBID: ${DATABRICKS_JOBID}
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW__CORE__FERNET_KEY}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./docker/airflow/dags:/opt/airflow/dags
+      - ./docker/airflow/logs:/opt/airflow/logs
+      - ./docker/airflow/plugins:/opt/airflow/plugins
+    depends_on:
+      - postgres
     networks:
       - iassist-net
 
+# ==============================
+# 🧩 Shared Network & Volumes
+# ==============================
 networks:
   iassist-net:
-    name: iassist-platform_iassist-net
-    driver: bridge
 
 volumes:
   db_data:
-    name: iassist-platform_db_data
