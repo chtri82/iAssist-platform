@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Body
-from orchestrator import Orchestrator
+from app.orchestrator import Orchestrator
 
 # Initialize FastAPI app
 app = FastAPI(title="iAssist AI Core", version="1.0")

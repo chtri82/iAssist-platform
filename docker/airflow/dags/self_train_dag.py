@@ -13,7 +13,7 @@ DATABRICKS_URL = os.getenv("DATABRICKS_URL", "")
 DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN", "")
 DATABRICKS_JOBID = os.getenv("DATABRICKS_JOBID", "")
 POSTGRES_CONN = {
-    "host": "postgres",
+    "host": os.getenv("POSTGRES_HOST", "postgres"),
     "dbname": os.getenv("POSTGRES_DB", "iassist"),
     "user": os.getenv("POSTGRES_USER", "admin"),
     "password": os.getenv("POSTGRES_PASSWORD", "secret"),
@@ -23,7 +23,6 @@ POSTGRES_CONN = {
 # ===============================
 # TASK FUNCTIONS
 # ===============================
-
 def log_event(service, message):
     """Log DAG event to Postgres results table"""
     conn = psycopg2.connect(**POSTGRES_CONN)
@@ -35,7 +34,6 @@ def log_event(service, message):
     conn.commit()
     cur.close()
     conn.close()
-
 
 def extract_training_tasks(**kwargs):
     """Get pending training tasks from database"""
@@ -50,7 +48,6 @@ def extract_training_tasks(**kwargs):
         return None
     log_event("extract_training_tasks", f"Retrieved {len(rows)} training tasks.")
     return rows[0]
-
 
 def local_pretrain(**context):
     """Call AI Core to perform light preprocessing or simulation"""
@@ -67,7 +64,6 @@ def local_pretrain(**context):
         log_event("local_pretrain", f"Error contacting AI Core: {e}")
         return f"Error contacting AI Core: {e}"
 
-
 def trigger_databricks_training(**context):
     """Trigger Databricks job for distributed agent retraining"""
     headers = {"Authorization": f"Bearer {DATABRICKS_TOKEN}"}
@@ -81,12 +77,10 @@ def trigger_databricks_training(**context):
     except Exception as e:
         log_event("databricks_trigger", f"Databricks trigger error: {e}")
 
-
 def finalize_training(**kwargs):
     """Training cycle as complete"""
     log_event("finalize_training", "✅ Training cycle completed successfully.")
     return "Training complete."
-
 
 # ===============================
 # DAG DEFINITION

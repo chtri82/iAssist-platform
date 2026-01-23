@@ -1,19 +1,20 @@
-FROM python:3.14-64
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies needed for psycopg2 and scientific libs
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
+# Install dependencies
+RUN apt-get update && apt-get install -y gcc libpq-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency list
+COPY requirements.txt .
 
-# Copy the app code last to take advantage of Docker layer caching
-COPY app /app
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Default command
-CMD ["python", "main.py"]
+# Copy application code
+COPY app ./app
+
+EXPOSE 5000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]

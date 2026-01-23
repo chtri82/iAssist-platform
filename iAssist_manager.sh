@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==========================================================
 # iAssist Platform Management Script
-# Author: Toni-Ann
+# Author: Charlie Triantafilou
 # Purpose: Automate setup, startup, rebuild, cleaning & logs
 # ==========================================================
 
@@ -62,12 +62,12 @@ start_iassist() {
   fi
 
   print_info "Running health checks..."
-  check_health "API Gateway" "http://localhost:8080/swagger" || true
+  check_health "🌐 API Gateway 🌐" "http://localhost:8080/swagger" || true
   check_health "AI Core" "http://localhost:5000/docs" || true
   check_health "R Analytics" "http://localhost:8000/__docs__" || true
   check_health "Airflow" "http://localhost:8081" || true
 
-  print_success "✅ All reachable services started successfully!"
+  print_success "✅ ✅ ✅ All reachable services started successfully! ✅ ✅ ✅"
 }
 
 # -------------------------------
@@ -87,7 +87,7 @@ rebuild_iassist() {
   docker compose down -v
   docker compose build --no-cache
   docker compose up -d
-  print_success "Rebuild complete! Running health checks..."
+  print_success "✅ ✅ Rebuild complete! Running health checks ✅ ✅"
   check_health "API Gateway" "http://localhost:8080/swagger" || true
 }
 
