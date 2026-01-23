@@ -19,7 +19,7 @@ async def handle_command(data: dict = Body(...)):
 @app.get("/")
 def root():
     """
-    Health check endpoint — ensures the AI Core is online.
+    Health check endpoint ensures AI Core is online.
     """
     return {"message": "iAssist AI Core operational"}
 
@@ -28,4 +28,4 @@ def motivate():
     """
     Simple endpoint to test response generation.
     """
-    return {"quote": "Success is built one iteration at a time."}
+    return {"quote": "Winning is built one iteration at a time."}
