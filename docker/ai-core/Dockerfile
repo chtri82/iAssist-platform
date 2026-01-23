@@ -1,18 +1,19 @@
-FROM python:3.11-slim
+FROM python:3.14-64
 
 WORKDIR /app
 
-# Copy everything inside ai-core/app into /app
-COPY ./app /app
-COPY requirements.txt /app/requirements.txt
+# Install system dependencies needed for psycopg2 and scientific libs
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copy and install Python dependencies
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Make sure /app is on the Python module path
-ENV PYTHONPATH=/app
+# Copy the app code last to take advantage of Docker layer caching
+COPY app /app
 
-EXPOSE 5000
-
-# Run the FastAPI app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
+# Default command
+CMD ["python", "main.py"]

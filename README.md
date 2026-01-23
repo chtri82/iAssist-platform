@@ -1,6 +1,17 @@
 # iAssist-platform
 Cloud-ready, AI + Data Infrastructure powered by GitHub + Docker + Databricks + Spark + MLflow + Airflow, designed for ML pipelines, data science, and LLM training
 
+Running iAssist Platform : 
+Bash file in project root is set up to perform iAssist platform services, health checks, builds containers, show status, stop all services gracefully, cleans all containers, volumes, and networks. 
+
+Command	                                Description
+./iAssist_manager.sh start	        Start all services + health checks
+./iAssist_manager.sh start --logs	Start + stream logs live for 30 seconds
+./iAssist_manager.sh stop	        Stop all services
+./iAssist_manager.sh rebuild	        Full rebuild (fresh containers)
+./iAssist_manager.sh status	        Show running container info
+./iAssist_manager.sh clean --force	Remove all containers, volumes, networks (confirmation needed)
+
 **VIEW IN RAW FORMAT FOR READABILITY**
 
 
