@@ -7,15 +7,14 @@ services:
       context: ./docker/ai-core
       dockerfile: Dockerfile
     container_name: ai-core
-    restart: always
     ports:
       - "5000:5000"
-    env_file:
-      - ./.env
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key_placeholder}
+    volumes:
+      - ./docker/ai-core/app:/app/app
     networks:
       - iassist-net
-    depends_on:
-      - postgres
 
   # ==============================
   # 📊 R Analytics (Plumber API)

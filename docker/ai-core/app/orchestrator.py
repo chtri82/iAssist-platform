@@ -1,6 +1,7 @@
 import requests
 import json
 import logging
+from app.clients.client_registry import client_registry
 
 class Orchestrator:
     def __init__(self):
@@ -54,3 +55,10 @@ class Orchestrator:
         except Exception as e:
             self.logger.error(f"Error calling R Analytics /summary: {e}")
             return f"Error communicating with R Analytics service: {e}"
+    
+    def get_client_for(domain: str):
+    """Returns a pre-registered API client instance by domain."""
+    client_cls = client_registry.get(domain)
+    if not client_cls:
+        raise ValueError(f"No client registered for {domain}")
+    return client_cls(base_url=f"https://{domain}")

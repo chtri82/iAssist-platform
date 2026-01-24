@@ -1,0 +1,96 @@
+# ============================================================
+# iAssist Self-Training Data Sources (Safe, Approved APIs)
+# ============================================================
+
+finance:
+  description: "Financial and market data APIs (open or licensed)"
+  approved_domains:
+    - "api.nasdaq.com"             # Nasdaq Developer Portal
+    - "api.stlouisfed.org"         # Federal Reserve Economic Data (FRED)
+    - "api.polygon.io"             # Market data and aggregates
+    - "finnhub.io"                 # Stock, forex, and crypto data
+    - "api.tradier.com"            # Brokerage and market streaming
+    - "data.alphavantage.co"       # Global market and economic data
+    - "api.coinbase.com"           # Crypto exchange market data
+    - "api.uphold.com"             # Digital assets and wallet data
+
+government_policy:
+  description: "Government, law, and policy datasets"
+  approved_domains:
+    - "api.federalregister.gov"
+    - "api.congress.gov"
+    - "api.data.gov"
+    - "data.europa.eu"
+    - "data.gov.uk"
+    - "data.ca.gov"
+    - "open.canada.ca"
+
+medical_health:
+  description: "Public health, biomedical, and pharmaceutical data"
+  approved_domains:
+    - "api.fda.gov"                # FDA open data
+    - "clinicaltrials.gov"         # Clinical study registry
+    - "api.cdc.gov"                # CDC data APIs
+    - "data.nih.gov"               # NIH research datasets
+    - "api.who.int"                # WHO open data
+    - "healthdata.gov"             # US Health Data
+    - "openfema.data.gov"          # Emergency management data
+
+education_research:
+  description: "Academic, research, and education APIs"
+  approved_domains:
+    - "arxiv.org"                  # Research papers
+    - "api.crossref.org"           # DOI metadata and references
+    - "huggingface.co"             # ML model and dataset metadata
+    - "zenodo.org"                 # Scientific repository
+    - "kaggle.com"                 # Public datasets
+    - "opencitations.net"          # Citation network
+    - "dataverse.harvard.edu"      # Academic data repository
+
+social_media:
+  description: "Official developer APIs for social networks"
+  approved_domains:
+    - "api.twitter.com"            # X/Twitter API
+    - "www.reddit.com"             # Reddit API
+    - "youtube.googleapis.com"     # YouTube Data API
+    - "graph.facebook.com"         # Meta Graph API
+    - "api.linkedin.com"           # LinkedIn API
+    - "api.github.com"             # GitHub developer API
+    - "en.wikipedia.org"           # MediaWiki/Wikipedia API
+    - "api.stackexchange.com"      # Stack Exchange API
+
+home_environment:
+  description: "IoT, home automation, and environment data"
+  approved_domains:
+    - "api.openweathermap.org"
+    - "api.weather.gov"
+    - "api.nrel.gov"
+    - "openei.org"
+    - "developer.honeywell.com"    # Smart home integrations
+    - "developers.meethue.com"     # Philips Hue
+    - "api.smartthings.com"        # Samsung SmartThings
+
+science_technology:
+  description: "STEM, space, and innovation data APIs"
+  approved_domains:
+    - "api.nasa.gov"
+    - "data.noaa.gov"
+    - "api.usgs.gov"
+    - "data.oecd.org"
+    - "api.esa.int"
+    - "api.jpl.nasa.gov"
+
+psychology_behavior:
+  description: "Behavioral and cognitive science datasets"
+  approved_domains:
+    - "openpsychometrics.org"
+    - "osf.io"
+    - "data.unicef.org"
+    - "ourworldindata.org"
+
+animal_veterinary:
+  description: "Animal health and veterinary datasets"
+  approved_domains:
+    - "data.onehealth.org"
+    - "openvetscience.org"
+    - "api.worldanimalprotection.org"
