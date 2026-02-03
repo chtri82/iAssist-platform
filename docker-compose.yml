@@ -15,7 +15,7 @@ services:
       - ./docker/ai-core/app:/app/app
     networks:
       - iassist-net
-
+      
   # ==============================
   # 📊 R Analytics (Plumber API)
   # ==============================

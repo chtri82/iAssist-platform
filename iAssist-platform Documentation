@@ -1,0 +1,38 @@
+# iAssist Platform
+Cloud-ready, modular AI + Data Infrastructure built with Docker, .NET, Python, and R — designed for data science pipelines, machine learning workflows, and orchestration with Airflow and Databricks.
+
+## ⚙️ Running iAssist Platform
+The platform provides a full local orchestration environment with isolated microservices and self-healing management through the bash manager script.
+
+| Command | Description |
+|----------|--------------|
+| `./iAssist_manager.sh start` | Start all services + health checks |
+| `./iAssist_manager.sh start --logs` | Start + stream logs live |
+| `./iAssist_manager.sh stop` | Stop all services |
+| `./iAssist_manager.sh rebuild` | Full rebuild (fresh containers) |
+| `./iAssist_manager.sh status` | Show running container info |
+| `./iAssist_manager.sh clean --force` | Remove all containers, volumes, networks |
+
+## 🧱 Core Modular Architecture
+iAssist Platform
+.NET API Gateway
+PostgreSQL DB
+
+## 🐳 Containerized Microservice Deployment
+API Gateway (8080) -> AI Core (5000) -> R Analytics (8000) ->  PostgreSQL (5432)
+
+Each service runs in an isolated container connected through the `iassist-net` Docker network.
+
+## 📊 Data and AI Pipeline Flow
+API Gateway (.NET) -> AI Core (FastAPI + Python) -> R Analytics (Plumber + R) -> PostgreSQL Database
+
+## ☁️ Cloud / Databricks Integration
+Data flows through Databricks for cleaning, feature engineering, and model lifecycle management with MLflow.
+
+## 🧩 Future Extensions
+- Prefect-based dynamic orchestration
+- AutoML integrations (Databricks / H2O / Vertex AI)
+- Fine-tuned LLM microservice bridge
+
+## License
+Apache 2.0

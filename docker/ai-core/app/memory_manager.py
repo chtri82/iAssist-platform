@@ -1,11 +1,10 @@
 class MemoryManager:
     def __init__(self):
-        self.history = []
+        self.memory = {}
 
-    def store_interaction(self, text: str):
-        self.history.append(text)
-        if len(self.history) > 20:  # keep recent context
-            self.history.pop(0)
+    def recall(self, key):
+        return f"[Stub] Memory retrieval unavailable in public version."
 
-    def get_context(self):
-        return " ".join(self.history)
+    def store(self, key, value):
+        self.memory[key] = value
+        return "[Stub] Stored temporarily."

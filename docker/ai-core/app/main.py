@@ -1,5 +1,11 @@
 from fastapi import FastAPI, Body
-from app.orchestrator import Orchestrator
+
+## Check for iAssist intelligence repo (PRIVATE) to build and run iAssist Platform
+try:
+    from intelligence.orchestrator import Orchestrator  # Private repo
+except ImportError:
+    from orchestrator import Orchestrator  # Public stub
+
 
 # Initialize FastAPI app
 app = FastAPI(title="iAssist AI Core", version="1.0")
