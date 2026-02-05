@@ -1,11 +1,15 @@
 from fastapi import FastAPI, Body
+import importlib.util, os
 
-## Check for iAssist intelligence repo (PRIVATE) to build and run iAssist Platform
-try:
-    from intelligence.orchestrator import Orchestrator  # Private repo
-except ImportError:
-    from orchestrator import Orchestrator  # Public stub
-
+intelligence_path = "/app/intelligence/orchestrator.py"
+if os.path.exists(intelligence_path):
+    spec = importlib.util.spec_from_file_location("orchestrator", intelligence_path)
+    orchestrator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(orchestrator)
+    print("[INFO] Loaded private intelligence orchestrator.")
+else:
+    from orchestrator_stub import Orchestrator
+    print("[WARN] Using public orchestrator stub.")
 
 # Initialize FastAPI app
 app = FastAPI(title="iAssist AI Core", version="1.0")

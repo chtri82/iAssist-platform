@@ -42,23 +42,23 @@ if (Directory.Exists(privatePath) || Environment.GetEnvironmentVariable("USE_PRI
                 if (iface != null)
                 {
                     builder.Services.AddScoped(iface, serviceType);
-                    Console.WriteLine($ Registered private service: {iface.Name} → {serviceType.Name}");
+                    Console.WriteLine($"Registered private service: {iface.Name} → {serviceType.Name}");
                 }
             }
         }
         else
         {
-            Console.WriteLine( No compiled intelligence assembly found. Run `dotnet build` in iAssist-intelligence.");
+            Console.WriteLine( "No compiled intelligence assembly found. Run `dotnet build` in iAssist-intelligence.");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($ Error loading intelligence assembly: {ex.Message}");
+        Console.WriteLine($"Error loading intelligence assembly: {ex.Message}");
     }
 }
 else
 {
-    Console.WriteLine( Running in Public mode — using mock/stub services.");
+    Console.WriteLine("Running in Public mode — using mock/stub services.");
 
     // Register lightweight mock services
     builder.Services.AddScoped<IDatabaseService, MockDatabaseService>();
