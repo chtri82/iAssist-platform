@@ -42,14 +42,13 @@ jobs:
           find . -maxdepth 6 -name "*.csproj" -print
 
       # ---- Recommended: restore/build .NET project to improve SAST accuracy ----
-      # Adjust paths if your .NET project lives elsewhere
-      - name: .NET Restore
-        working-directory: docker/api-gateway
-        run: dotnet restore
+      - name: .NET Restore (ApiGateway)
+        run: dotnet restore ./docker/api-gateway/iAssist.ApiGateway/iAssist.ApiGateway.csproj
 
-      - name: .NET Build
-        working-directory: docker/api-gateway
-        run: dotnet build -c Release --no-restore
+      - name: .NET Build (ApiGateway)
+        run: dotnet build ./docker/api-gateway/iAssist.ApiGateway/iAssist.ApiGateway.csproj -c Release --no-restore
+
+
 
       # ---- Run Fortify on Demand scan ----
       - name: Run Fortify on Demand SAST (and optional SCA)
