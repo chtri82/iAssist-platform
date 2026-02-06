@@ -18,10 +18,15 @@ jobs:
       security-events: write
 
     steps:
+      # ---------------------------------------
+      # Checkout
+      # ---------------------------------------
       - name: Check Out Source Code
         uses: actions/checkout@v4
 
-      # ---- Optional but recommended: ensure build tools are present for your repo ----
+      # ---------------------------------------
+      # Setup build tools
+      # ---------------------------------------
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -32,38 +37,35 @@ jobs:
         with:
           python-version: "3.12"
 
-      # ---- Recommended: restore/build .NET project to improve SAST accuracy ----
-      # Adjust paths if your .NET project lives elsewhere
-      - name: .NET Restore
-        working-directory: docker/api-gateway
-        run: dotnet restore
+      # ---------------------------------------
+      # Restore & build .NET solution (CRITICAL)
+      # ---------------------------------------
+      - name: .NET Restore (solution)
+        run: dotnet restore ./iAssist-platform.sln
 
-      - name: .NET Build
-        working-directory: docker/api-gateway
-        run: dotnet build -c Release --no-restore
+      - name: .NET Build (solution)
+        run: dotnet build ./iAssist-platform.sln -c Release --no-restore
 
-      # ---- Run Fortify on Demand scan ----
-      - name: Run Fortify on Demand SAST (and optional SCA)
+      # ---------------------------------------
+      # Fortify Scan
+      # ---------------------------------------
+      - name: Run Fortify on Demand SAST
         uses: fortify/github-action@v2
         with:
           sast-scan: true
           debricked-sca-scan: true
         env:
-          # Required: Fortify on Demand (FoD)
+          # -------- Fortify on Demand --------
           FOD_URL: https://ams.fortify.com
           FOD_TENANT: ${{ secrets.FOD_TENANT }}
           FOD_USER: ${{ secrets.FOD_USER }}
           FOD_PASSWORD: ${{ secrets.FOD_PAT }}
 
-          # Recommended behavior:
+          # -------- Behavior --------
           DO_WAIT: true
           DO_EXPORT: true
 
-          # Optional: make the release name stable/explicit (defaults to org/repo:branch) :contentReference[oaicite:1]{index=1}
-          # FOD_RELEASE: yourAppName:yourReleaseName
-
-          # Packaging tweaks: treat repo as multi-language and exclude things that should never be scanned.
-          # -bt none is the safest "mono-repo" default when you have multiple stacks.
+          # -------- Mono-repo safe packaging --------
           PACKAGE_EXTRA_OPTS: >-
             -bt none
             -exclude .git
