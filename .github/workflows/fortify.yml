@@ -31,6 +31,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          
+      - name: Debug repo root and locate .NET files
+        run: | 
+          pwd 
+          ls -la 
+          echo "---- .sln ----"
+          find . -maxdepth 4 -name "*.sln" -print
+          echo "---- .csproj ----"
+          find . -maxdepth 6 -name "*.csproj" -print
 
       # ---- Recommended: restore/build .NET project to improve SAST accuracy ----
       # Adjust paths if your .NET project lives elsewhere
