@@ -119,6 +119,7 @@ airflow_home/
 .docker/
 .dockerignore
 docker-compose.override.yml
+docker-compose.private.override.yml
 # Avoid committing built images or volumes
 **/tmp/
 **/cache/
@@ -153,6 +154,8 @@ mlflow.log
 *.sqlite
 *.db
 *.sql-journal
+*.sql
+db_backup_*.sql
 *.pgdata
 /data/
 pgdata/
