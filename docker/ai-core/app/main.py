@@ -3,55 +3,71 @@ import importlib.util
 import os
 from typing import Type
 
+from tools import ToolRegistry
+from public_tools import RForecastTool, RSummaryTool
+from orchestrator import Orchestrator as PublicOrchestrator
 
-def load_orchestrator_class() -> Type:
+# Initialize FastAPI app FIRST
+app = FastAPI(title="iAssist AI Core", version="1.0")
+
+# ---- Public tool registry (works in public-only mode) ----
+R_BASE_URL = os.getenv("R_ANALYTICS_URL", "http://r-analytics:8000")
+
+registry = ToolRegistry()
+registry.register(RForecastTool(R_BASE_URL))
+registry.register(RSummaryTool(R_BASE_URL))
+
+def load_private_orchestrator_class() -> Type | None:
     """
-    Loads the private orchestrator if mounted; otherwise falls back to the public stub.
+    If private intelligence is mounted, load its Orchestrator class.
+    Returns None if not found / not loadable.
     """
-    # Configurable path so compose override can mount intelligence wherever we want.
     intelligence_path = os.getenv(
         "IA_INTELLIGENCE_ORCHESTRATOR_PATH",
         "/app/intelligence/orchestrator.py",
     )
 
-    if os.path.exists(intelligence_path):
-        spec = importlib.util.spec_from_file_location("private_orchestrator", intelligence_path)
-        if spec and spec.loader:
-            private_mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(private_mod)
-            if hasattr(private_mod, "Orchestrator"):
-                print(f"[INFO] Loaded private intelligence orchestrator from {intelligence_path}")
-                return private_mod.Orchestrator
+    if not os.path.exists(intelligence_path):
+        return None
 
-        print(f"[WARN] Private orchestrator file found but could not be loaded: {intelligence_path}")
+    spec = importlib.util.spec_from_file_location("private_orchestrator", intelligence_path)
+    if not spec or not spec.loader:
+        return None
 
-    # Public fallback (this file exists: app/orchestrator.py)
-    from orchestrator import Orchestrator as PublicOrchestrator
+    private_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(private_mod)
+
+    if hasattr(private_mod, "Orchestrator"):
+        print(f"[INFO] Loaded private intelligence orchestrator from {intelligence_path}")
+        return private_mod.Orchestrator
+
+    return None
+
+# ---- Initialize orchestrator (private if available, else public with tools) ----
+PrivateOrchestrator = load_private_orchestrator_class()
+
+if PrivateOrchestrator:
+    orchestrator = PrivateOrchestrator()
+else:
     print("[WARN] Using public orchestrator stub.")
-    return PublicOrchestrator
+    orchestrator = PublicOrchestrator(registry)
 
-
-# Initialize FastAPI app
-app = FastAPI(title="iAssist AI Core", version="1.0")
-
-# Initialize Orchestrator
-OrchestratorImpl = load_orchestrator_class()
-orchestrator = OrchestratorImpl()
-
-# Runtime guardrail
+# ---- Runtime guardrail ----
 required_keys = {"type", "content", "metadata"}
 test_response = orchestrator.process("healthcheck")
-
 if not isinstance(test_response, dict) or not required_keys.issubset(test_response.keys()):
-    raise RuntimeError(
-        "Loaded orchestrator does not conform to OrchestratorContract"
-    )
+    raise RuntimeError("Loaded orchestrator does not conform to OrchestratorContract")
+
+
+@app.get("/tools")
+def list_tools():
+    return {"tools": registry.list()}
+
 
 @app.post("/command")
 async def handle_command(data: dict = Body(...)):
     user_input = data.get("input", "")
-    response = orchestrator.process(user_input)
-    return {"response": response}
+    return orchestrator.process(user_input)
 
 
 @app.get("/")
@@ -61,11 +77,9 @@ def root():
 
 @app.get("/capabilities")
 def capabilities():
-    """
-    Useful for debugging: tells you whether private intelligence is loaded.
-    """
     impl = orchestrator.__class__.__module__
     return {
         "orchestrator_module": impl,
         "private_intelligence_loaded": impl == "private_orchestrator",
+        "public_tools": registry.list(),
     }
