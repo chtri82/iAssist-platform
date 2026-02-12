@@ -2,11 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install dependencies
-RUN apt-get update && apt-get install -y gcc libpq-dev \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# System deps (libpq for postgres clients, gcc only if you compile wheels)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency list
+# Copy dependency list first for better Docker layer caching
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip \

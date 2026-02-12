@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body, Request
 import importlib.util
 import os
+import requests
+
 from typing import Type
 
 from tools import ToolRegistry
@@ -10,8 +12,11 @@ from orchestrator import Orchestrator as PublicOrchestrator
 # Initialize FastAPI app FIRST
 app = FastAPI(title="iAssist AI Core", version="1.0")
 
-# ---- Public tool registry (works in public-only mode) ----
-R_BASE_URL = os.getenv("R_ANALYTICS_URL", "http://r-analytics:8000")
+from config.loader import load_yaml
+
+CONFIG = load_yaml("app/config/services.yaml")
+R_CFG = CONFIG["services"]["r_analytics"]
+R_BASE_URL = R_CFG["base_url"]
 
 registry = ToolRegistry()
 registry.register(RForecastTool(R_BASE_URL))
@@ -63,12 +68,37 @@ if not isinstance(test_response, dict) or not required_keys.issubset(test_respon
 def list_tools():
     return {"tools": registry.list()}
 
+@app.get("/healthz")
+def healthz():
+    status = {"ok": True, "checks": {}}
+    url = f"{R_BASE_URL}{R_CFG.get('health_path', '/health')}"
+    try:
+        r = requests.get(url, timeout=int(R_CFG.get("timeout_s", 3)))
+        status["checks"]["r_analytics"] = {"ok": r.status_code == 200, "status_code": r.status_code}
+        if r.status_code != 200:
+            status["ok"] = False
+    except Exception as e:
+        status["checks"]["r_analytics"] = {"ok": False, "error": str(e)}
+        status["ok"] = False
+    return status
 
 @app.post("/command")
 async def handle_command(data: dict = Body(...)):
     user_input = data.get("input", "")
-    return orchestrator.process(user_input)
+    resp = orchestrator.process(user_input)
 
+    # Ensure metadata exists + include request id
+    resp.setdefault("metadata", {})
+    resp["metadata"]["request_id"] = request.state.request_id
+    return resp
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["x-request-id"] = request_id
+    return response
 
 @app.get("/")
 def root():
