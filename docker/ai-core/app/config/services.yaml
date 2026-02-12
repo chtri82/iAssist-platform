@@ -1,0 +1,6 @@
+services:
+  r_analytics:
+    base_url: ${R_ANALYTICS_URL:-http://r-analytics:8000}
+    health_path: /health
+    timeout_s: 3
+    retries: 2
