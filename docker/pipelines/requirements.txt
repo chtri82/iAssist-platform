@@ -1,0 +1,9 @@
+
+pandas
+scikit-learn
+scipy
+joblib
+
+psycopg2-binary
+requests
+SQLAlchemy
