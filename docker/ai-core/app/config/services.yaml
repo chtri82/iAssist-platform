@@ -4,3 +4,10 @@ services:
     health_path: /health
     timeout_s: 3
     retries: 2
+
+  postgres:
+    host: ${POSTGRES_HOST:-postgres}
+    port: ${POSTGRES_PORT:-5432}
+    dbname: ${POSTGRES_DB:-iassist}
+    user: ${POSTGRES_USER:-admin}
+    password: ${POSTGRES_PASSWORD:-secret}

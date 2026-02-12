@@ -1,62 +1,49 @@
-from fastapi import BackgroundTasks, Request
-import time
 import importlib.util
 import os
+import uuid
+from datetime import datetime, timezone
+from typing import Type, Optional
+
 import requests
+from fastapi import FastAPI, Body, BackgroundTasks, Request
 
-from typing import Type
-
-from app.jobs import JobStore
+from app.config.loader import load_yaml
 from app.tools import ToolRegistry
 from app.public_tools import RForecastTool, RSummaryTool
 from app.orchestrator import Orchestrator as PublicOrchestrator
+from app.job_store_pg import PostgresJobStore
 
-# Initialize FastAPI app FIRST
+# ----------------------------
+# App + Config
+# ----------------------------
 app = FastAPI(title="iAssist AI Core", version="1.0")
-
-from app.config.loader import load_yaml
 
 CONFIG = load_yaml("app/config/services.yaml")
 R_CFG = CONFIG["services"]["r_analytics"]
 R_BASE_URL = R_CFG["base_url"]
-JOB_TTL_SECONDS = int(os.getenv("JOB_TTL_SECONDS", "3600"))  # 1 hour default
 
+# ----------------------------
+# Tool Registry
+# ----------------------------
 registry = ToolRegistry()
 registry.register(RForecastTool(R_BASE_URL))
 registry.register(RSummaryTool(R_BASE_URL))
 
-job_store = JobStore()
+# ----------------------------
+# Job Store (Postgres)
+# ----------------------------
+job_store = PostgresJobStore()
 
-def run_job(job_id: str, user_input: str):
-    job = job_store.get(job_id)
-    if not job or job.status == "cancelled":
-        return
+def now():
+    return datetime.now(timezone.utc)
 
-    job_store.update(job_id, status="running", started_at=time.time())
-
-    try:
-        # Best-effort cancel check before doing work
-        job = job_store.get(job_id)
-        if job and job.cancel_requested:
-            job_store.update(job_id, status="cancelled", finished_at=time.time())
-            return
-
-        result = orchestrator.process(user_input)
-
-        # Another cancel check after work (we can't stop tool mid-flight yet)
-        job = job_store.get(job_id)
-        if job and job.cancel_requested:
-            job_store.update(job_id, status="cancelled", finished_at=time.time())
-            return
-
-        job_store.update(job_id, status="succeeded", finished_at=time.time(), result=result)
-    except Exception as e:
-        job_store.update(job_id, status="failed", finished_at=time.time(), error=str(e))
-
-def load_private_orchestrator_class() -> Type | None:
+# ----------------------------
+# Private orchestrator loader
+# ----------------------------
+def load_private_orchestrator_class() -> Optional[Type]:
     """
-    If private intelligence is mounted, load its Orchestrator class.
-    Returns None if not found / not loadable.
+    Load private intelligence orchestrator if mounted.
+    Returns None when not present or not loadable.
     """
     intelligence_path = os.getenv(
         "IA_INTELLIGENCE_ORCHESTRATOR_PATH",
@@ -79,20 +66,101 @@ def load_private_orchestrator_class() -> Type | None:
 
     return None
 
-# ---- Initialize orchestrator (private if available, else public with tools) ----
+# ----------------------------
+# Orchestrator init
+# ----------------------------
 PrivateOrchestrator = load_private_orchestrator_class()
 
 if PrivateOrchestrator:
     orchestrator = PrivateOrchestrator()
 else:
     print("[WARN] Using public orchestrator stub.")
-    orchestrator = PublicOrchestrator(registry)
+    orchestrator = PublicOrchestrator(registry, job_store=job_store)
 
-# ---- Runtime guardrail ----
+# Runtime guardrail
 required_keys = {"type", "content", "metadata"}
 test_response = orchestrator.process("healthcheck")
 if not isinstance(test_response, dict) or not required_keys.issubset(test_response.keys()):
     raise RuntimeError("Loaded orchestrator does not conform to OrchestratorContract")
+
+# ----------------------------
+# Middleware: request id
+# ----------------------------
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["x-request-id"] = request_id
+    return response
+
+# ----------------------------
+# Helpers: normalize DB row -> API job shape
+# ----------------------------
+def normalize_job_row(row: dict) -> dict:
+    # PostgresJobStore returns dict-like row with these columns
+    return {
+        "job_id": str(row.get("job_id")),
+        "status": row.get("status"),
+        "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
+        "started_at": row.get("started_at").isoformat() if row.get("started_at") else None,
+        "finished_at": row.get("finished_at").isoformat() if row.get("finished_at") else None,
+        "input": row.get("input_json"),
+        "result": row.get("result_json"),
+        "error": row.get("error_text"),
+        "cancel_requested": bool(row.get("cancel_requested")),
+    }
+
+# ----------------------------
+# Background job runner
+# ----------------------------
+def run_job(job_id: str, user_input: str):
+    start = now()
+    job_store.add_event(job_id, "Job started")
+    job_store.update(job_id, status="running", started_at=now())
+
+    # Cancel check before doing work
+    row = job_store.get(job_id)
+    if row and row.get("cancel_requested"):
+        job_store.add_event(job_id, "Job cancelled before execution", level="warn")
+        job_store.update(job_id, status="cancelled", finished_at=now())
+        return
+
+    try:
+        result = orchestrator.process(user_input,
+            context={"request_id": row.get("input_json", {}).get("request_id") if row else None, "job_id": job_id},
+)
+
+        # Cancel check after execution (can't interrupt tool mid-flight yet)
+        row = job_store.get(job_id)
+        if row and row.get("cancel_requested"):
+            job_store.add_event(job_id, "Job cancelled after execution", level="warn")
+            job_store.update(job_id, status="cancelled", finished_at=now())
+            return
+
+        job_store.add_event(job_id, "Job succeeded", payload={"duration_s": (now() - start).total_seconds()})
+        job_store.update(job_id, status="succeeded", finished_at=now(), result_json=result)
+
+    except Exception as e:
+        job_store.add_event(job_id, "Job failed", level="error",
+                            payload={"error": str(e), "duration_s": (now() - start).total_seconds()})
+        job_store.update(job_id, status="failed", finished_at=now(), error_text=str(e))
+
+# ----------------------------
+# Routes
+# ----------------------------
+@app.get("/")
+def root():
+    return {"message": "iAssist AI Core operational"}
+
+@app.get("/capabilities")
+def capabilities():
+    impl = orchestrator.__class__.__module__
+    return {
+        "orchestrator_module": impl,
+        "private_intelligence_loaded": impl == "private_orchestrator",
+        "public_tools": registry.list(),
+    }
 
 @app.get("/tools")
 def list_tools():
@@ -115,65 +183,68 @@ def healthz():
 @app.post("/command")
 async def handle_command(
     request: Request,
+    background_tasks: BackgroundTasks,
     data: dict = Body(...),
-    background_tasks: BackgroundTasks = None,
 ):
+
     user_input = data.get("input", "")
     async_mode = bool(data.get("async", False))
 
     if not async_mode:
-        resp = orchestrator.process(user_input)
+        ctx = {"request_id": getattr(request.state, "request_id", None), "job_id": None}
+        resp = orchestrator.process(user_input, context=ctx)
+
         resp.setdefault("metadata", {})
         resp["metadata"]["request_id"] = getattr(request.state, "request_id", None)
         resp["metadata"]["mode"] = "sync"
         return resp
 
-    # async path
-    job = job_store.create({"input": user_input})
-    background_tasks.add_task(run_job, job.id, user_input)
+    job_id = str(uuid.uuid4())
+    req_id = getattr(request.state, "request_id", None)
+    job_store.create(job_id, {"input": user_input, "request_id": req_id})
+    job_store.add_event(job_id, "Job queued")
+
+    background_tasks.add_task(run_job, job_id, user_input)
 
     return {
         "type": "job",
-        "content": {"job_id": job.id, "status": job.status},
+        "content": {"job_id": job_id, "status": "queued"},
         "metadata": {
             "request_id": getattr(request.state, "request_id", None),
             "mode": "async",
         },
     }
 
+@app.get("/jobs/{job_id}")
+def get_job(job_id: str):
+    row = job_store.get(job_id)
+    if not row:
+        return {"ok": False, "error": "job_not_found", "job_id": job_id}
+    return {"ok": True, "job": normalize_job_row(row)}
+
+@app.get("/jobs")
+def list_jobs(limit: int = 50):
+    rows = job_store.list_recent(limit=limit)
+    return {"ok": True, "jobs": [normalize_job_row(r) for r in rows]}
+
+@app.get("/jobs/{job_id}/events")
+def job_events(job_id: str, limit: int = 200):
+    row = job_store.get(job_id)
+    if not row:
+        return {"ok": False, "error": "job_not_found", "job_id": job_id}
+    ev = job_store.list_events(job_id, limit=limit)
+    # serialize datetimes
+    for e in ev:
+        if e.get("ts"):
+            e["ts"] = e["ts"].isoformat()
+    return {"ok": True, "job_id": job_id, "events": ev}
+
 @app.post("/jobs/{job_id}/cancel")
 def cancel_job(job_id: str):
     ok = job_store.request_cancel(job_id)
     if not ok:
         return {"ok": False, "error": "job_not_found", "job_id": job_id}
-    job = job_store.get(job_id)
-    return {"ok": True, "job": job_store.to_dict(job)}
+    job_store.add_event(job_id, "Cancel requested", level="warn")
+    row = job_store.get(job_id)
+    return {"ok": True, "job": normalize_job_row(row) if row else None}
 
-@app.get("/jobs/{job_id}")
-def get_job(job_id: str):
-    job = job_store.get(job_id)
-    if not job:
-        return {"ok": False, "error": "job_not_found", "job_id": job_id}
-    return {"ok": True, "job": job_store.to_dict(job)}
-
-@app.middleware("http")
-async def add_request_id(request: Request, call_next):
-    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
-    request.state.request_id = request_id
-    response = await call_next(request)
-    response.headers["x-request-id"] = request_id
-    return response
-
-@app.get("/")
-def root():
-    return {"message": "iAssist AI Core operational"}
-
-
-@app.get("/capabilities")
-def capabilities():
-    impl = orchestrator.__class__.__module__
-    return {
-        "orchestrator_module": impl,
-        "private_intelligence_loaded": impl == "private_orchestrator",
-        "public_tools": registry.list(),
-    }

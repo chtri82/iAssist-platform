@@ -1,13 +1,5 @@
-from typing import Dict, Any, Protocol
+from typing import Dict, Any, Protocol, Optional
 
 class OrchestratorContract(Protocol):
-    def process(self, user_input: str) -> Dict[str, Any]:
-        """
-        REQUIRED response shape:
-        {
-          "type": "text" | "json" | "tool_call" | "error",
-          "content": str | dict | list,
-          "metadata": dict
-        }
-        """
+    def process(self, user_input: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         ...

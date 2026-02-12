@@ -14,6 +14,7 @@ services:
       - R_ANALYTICS_URL=http://r-analytics:8000
       # Optional: point to private orchestrator if mounted by override file
       - IA_INTELLIGENCE_ORCHESTRATOR_PATH=/app/intelligence/orchestrator.py
+      
     networks:
       - iassist-net
 
