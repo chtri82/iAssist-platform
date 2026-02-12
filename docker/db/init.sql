@@ -67,3 +67,17 @@ CREATE TABLE IF NOT EXISTS ai_tool_invocations (
 CREATE INDEX IF NOT EXISTS idx_ai_tool_invocations_ts ON ai_tool_invocations(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_tool_invocations_tool ON ai_tool_invocations(tool_name, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_tool_invocations_job ON ai_tool_invocations(job_id, ts DESC);
+
+CREATE TABLE IF NOT EXISTS ai_models (
+  id            BIGSERIAL PRIMARY KEY,
+  name          TEXT NOT NULL,
+  version       TEXT NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  metrics_json  JSONB,
+  artifact_path TEXT NOT NULL,
+  is_active     BOOLEAN DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_models_name_version
+  ON ai_models(name, version);
+
