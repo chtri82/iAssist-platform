@@ -4,20 +4,19 @@ services:
   # ==============================
   ai-core:
     build:
-      context: ./docker/ai-core
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/ai-core/Dockerfile
     container_name: ai-core
     ports:
       - "5000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key_placeholder}
       - R_ANALYTICS_URL=http://r-analytics:8000
-      # Optional: point to private orchestrator if mounted by override file
       - IA_INTELLIGENCE_ORCHESTRATOR_PATH=/app/intelligence/orchestrator.py
-    networks:
-      - iassist-net
     volumes:
       - model_store:/models
+    networks:
+      - iassist-net
 
   # ==============================
   # 📊 R Analytics (Plumber API)

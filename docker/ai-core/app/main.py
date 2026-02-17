@@ -17,7 +17,7 @@ from app.model_loader import ModelManager
 # ----------------------------
 # App + Config
 # ----------------------------
-model_manager = ModelManager()
+model_manager = ModelManager(model_name="transaction_category_model")
 app = FastAPI(title="iAssist AI Core", version="1.0")
 
 from app.config.settings import load_services_config
@@ -221,12 +221,12 @@ async def handle_command(
 
 @app.post("/predict")
 def predict(data: dict = Body(...)):
-    amount = float(data.get("amount"))
-    category = model_manager.predict(amount)
+    amount = float(data["amount"])
+    pred = model_manager.predict(amount)
     return {
-        "amount": amount,
-        "predicted_category": category,
-        "model_path": model_manager.model_path
+        "type": "json",
+        "content": {"amount": amount, "predicted_category": pred},
+        "metadata": model_manager.info(),
     }
 
 @app.get("/jobs/{job_id}")
@@ -262,3 +262,7 @@ def cancel_job(job_id: str):
     row = job_store.get(job_id)
     return {"ok": True, "job": normalize_job_row(row) if row else None}
 
+@app.post("/models/reload")
+def reload_model():
+    model_manager.load_active_model()
+    return {"ok": True, "metadata": model_manager.info()}

@@ -68,6 +68,30 @@ CREATE INDEX IF NOT EXISTS idx_ai_tool_invocations_ts ON ai_tool_invocations(ts 
 CREATE INDEX IF NOT EXISTS idx_ai_tool_invocations_tool ON ai_tool_invocations(tool_name, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_tool_invocations_job ON ai_tool_invocations(job_id, ts DESC);
 
+-- =========================
+-- Feature Store (training data)
+-- =========================
+CREATE TABLE IF NOT EXISTS training_features (
+  id           BIGSERIAL PRIMARY KEY,
+  run_id       TEXT NOT NULL,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  user_id      INT,
+  amount       NUMERIC(10,2),
+  hour         INT,
+  day_of_week  INT,
+  month        INT,
+  category     TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_training_features_run_id
+  ON training_features(run_id);
+
+CREATE INDEX IF NOT EXISTS idx_training_features_created_at
+  ON training_features(created_at);
+
+-- =========================
+-- Model Registry
+-- =========================
 CREATE TABLE IF NOT EXISTS ai_models (
   id            BIGSERIAL PRIMARY KEY,
   name          TEXT NOT NULL,
@@ -78,6 +102,8 @@ CREATE TABLE IF NOT EXISTS ai_models (
   is_active     BOOLEAN DEFAULT FALSE
 );
 
-CREATE INDEX IF NOT EXISTS idx_ai_models_name_version
-  ON ai_models(name, version);
+CREATE INDEX IF NOT EXISTS idx_ai_models_active
+  ON ai_models(is_active);
 
+CREATE INDEX IF NOT EXISTS idx_ai_models_name_created
+  ON ai_models(name, created_at DESC);

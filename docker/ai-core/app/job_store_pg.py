@@ -3,22 +3,41 @@ from typing import Any, Dict, Optional, List
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from app.config.settings import load_services_config, postgres_dsn
+from app.config.loader import load_yaml
+
 
 class PostgresJobStore:
-    def __init__(self):
-        cfg = load_services_config()
-        self.dsn = postgres_dsn(cfg)
+    """
+    Simple Postgres-backed job store.
 
-        # psycopg2 DSN string
+    Reads config from app/config/services.yaml, then lets environment variables override it.
+    """
+
+    def __init__(self, config_path: str = "app/config/services.yaml"):
+        cfg = load_yaml(config_path)
+        services = cfg.get("services", {})
+
+        pg_cfg = services.get("postgres", {})
+        # env overrides win
+        pg_cfg = {
+            "host":   self._env("POSTGRES_HOST", pg_cfg.get("host", "postgres")),
+            "port":   int(self._env("POSTGRES_PORT", str(pg_cfg.get("port", 5432)))),
+            "dbname": self._env("POSTGRES_DB", pg_cfg.get("dbname", "iassist")),
+            "user":   self._env("POSTGRES_USER", pg_cfg.get("user", "admin")),
+            "password": self._env("POSTGRES_PASSWORD", pg_cfg.get("password", "secret")),
+        }
+
         self.dsn = (
             f"dbname={pg_cfg['dbname']} "
             f"host={pg_cfg['host']} "
             f"port={pg_cfg['port']} "
             f"user={pg_cfg['user']} "
-            f"password={pg_cfg['password']} "
-            f"application_name=iassist-ai-core"
+            f"password={pg_cfg['password']}"
         )
+
+    def _env(self, key: str, default: str) -> str:
+        v = __import__("os").getenv(key)
+        return v if v not in (None, "") else default
 
     def _conn(self):
         return psycopg2.connect(self.dsn)
@@ -29,7 +48,6 @@ class PostgresJobStore:
                 """
                 INSERT INTO ai_jobs (job_id, status, input_json)
                 VALUES (%s, %s, %s)
-                ON CONFLICT (job_id) DO NOTHING
                 """,
                 (job_id, "queued", Json(payload)),
             )
@@ -51,10 +69,9 @@ class PostgresJobStore:
                 v = Json(v)
             cols.append(f"{k}=%s")
             vals.append(v)
-
         vals.append(job_id)
-        sql = f"UPDATE ai_jobs SET {', '.join(cols)} WHERE job_id=%s"
 
+        sql = f"UPDATE ai_jobs SET {', '.join(cols)} WHERE job_id=%s"
         with self._conn() as conn, conn.cursor() as cur:
             cur.execute(sql, vals)
 
@@ -106,15 +123,3 @@ class PostgresJobStore:
                 (job_id, limit),
             )
             return [dict(r) for r in cur.fetchall()]
-    
-    def log_tool_invocation(self, tool_name: str, ok: bool, request_id: str | None = None,
-            job_id: str | None = None, latency_ms: int | None = None, error_text: str | None = None) -> None:
-        with self._conn() as conn, conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO ai_tool_invocations (request_id, job_id, tool_name, ok, latency_ms, error_text)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """,
-            (request_id, job_id, tool_name, ok, latency_ms, error_text),
-                    )  
-            

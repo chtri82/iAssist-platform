@@ -45,7 +45,7 @@ def postgres_dsn(cfg: Dict[str, Any]) -> str:
         f"password={pg['password']}"
     )
 
-def postgres_sqlalchemy_url(cfg: Dict[str, Any]) -> str:
-    """SQLAlchemy URL if/when you use it."""
+def postgres_sqlalchemy_url():
+    cfg = load_services_config()
     pg = cfg["services"]["postgres"]
     return f"postgresql+psycopg2://{pg['user']}:{pg['password']}@{pg['host']}:{pg['port']}/{pg['dbname']}"
