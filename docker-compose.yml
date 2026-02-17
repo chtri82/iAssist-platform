@@ -4,17 +4,17 @@ services:
   # ==============================
   ai-core:
     build:
-      context: ./docker/ai-core
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/ai-core/Dockerfile
     container_name: ai-core
     ports:
       - "5000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key_placeholder}
       - R_ANALYTICS_URL=http://r-analytics:8000
-      # Optional: point to private orchestrator if mounted by override file
       - IA_INTELLIGENCE_ORCHESTRATOR_PATH=/app/intelligence/orchestrator.py
-      
+    volumes:
+      - model_store:/models
     networks:
       - iassist-net
 
@@ -61,8 +61,8 @@ services:
   # ==============================
   pipelines:
     build:
-      context: ./docker/pipelines
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/pipelines/Dockerfile
     container_name: pipelines
     restart: on-failure
     command: ["python", "etl_job.py"]
@@ -72,6 +72,8 @@ services:
       - postgres
     networks:
       - iassist-net
+    volumes:
+      - model_store:/models
 
   # ==============================
   # 🗄️ Postgres Database
@@ -121,4 +123,6 @@ networks:
 
 volumes:
   db_data:
+  model_store:
+
   

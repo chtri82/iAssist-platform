@@ -167,6 +167,7 @@ postgres-data/
 *.pem
 *.key
 *.crt
+GitHub PAT_chtri82.txt
 
 # ---------- IDEs / Editors ----------
 .idea/
