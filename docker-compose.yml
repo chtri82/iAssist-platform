@@ -62,8 +62,8 @@ services:
   # ==============================
   pipelines:
     build:
-      context: ./docker/pipelines
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/pipelines/Dockerfile
     container_name: pipelines
     restart: on-failure
     command: ["python", "etl_job.py"]

@@ -8,10 +8,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev liblapack-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+# Install deps
+COPY docker/pipelines/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r /app/requirements.txt
 
-COPY . .
+# Copy pipelines code + shared module
+COPY docker/pipelines /app
+COPY shared /app/shared
+
+# Make sure Python can import /app/shared
+ENV PYTHONPATH=/app
 
 CMD ["python", "etl_job.py"]
