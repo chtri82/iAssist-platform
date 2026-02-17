@@ -19,7 +19,6 @@ services:
     volumes:
       - model_store:/models
 
-
   # ==============================
   # 📊 R Analytics (Plumber API)
   # ==============================

@@ -1,20 +1,16 @@
 import pandas as pd
-import psycopg2
 from sqlalchemy import create_engine
+from shared.config.settings import get_postgres_config, postgres_sqlalchemy_url
+import psycopg2
 import os
 
-# Environment variables (will come from docker-compose)
-DB_USER = os.getenv("POSTGRES_USER", "admin")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "secret")
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
-DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "iassist")
+PG_CFG = get_postgres_config()
+ENGINE_URL = postgres_sqlalchemy_url()  # uses shared config + env overrides
+engine = create_engine(ENGINE_URL)
 
 def extract_data():
     """Extract data from Postgres"""
-    conn_str = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    engine = create_engine(conn_str)
-    query = "SELECT * FROM user_transactions;"  # Example table
+    query = "SELECT * FROM user_transactions;"
     df = pd.read_sql(query, engine)
     print(f"✅ Extracted {len(df)} rows.")
     return df
@@ -28,8 +24,6 @@ def transform_data(df):
 
 def load_data(df):
     """Load transformed data back into Postgres"""
-    conn_str = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    engine = create_engine(conn_str)
     df.to_sql("user_transactions_cleaned", engine, if_exists="replace", index=False)
     print("💾 Data loaded into user_transactions_cleaned")
 

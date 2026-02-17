@@ -8,22 +8,25 @@ from datetime import datetime
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+from shared.config.settings import load_services_config
 
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
-DB_NAME = os.getenv("POSTGRES_DB", "iassist")
-DB_USER = os.getenv("POSTGRES_USER", "admin")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "secret")
+from shared.config.settings import get_postgres_config
+
+PG_CFG = get_postgres_config()
+CONFIG = load_services_config()
 
 MODEL_DIR = "/models"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 def get_connection():
     return psycopg2.connect(
-        host=DB_HOST,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS,
+        host=PG_CFG["host"],
+        dbname=PG_CFG["dbname"],
+        user=PG_CFG["user"],
+        password=PG_CFG["password"],
+        port=PG_CFG.get("port", 5432),
     )
+
 
 def load_training_data():
     with get_connection() as conn:

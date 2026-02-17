@@ -12,13 +12,17 @@ from app.tools import ToolRegistry
 from app.public_tools import RForecastTool, RSummaryTool
 from app.orchestrator import Orchestrator as PublicOrchestrator
 from app.job_store_pg import PostgresJobStore
+from app.model_loader import ModelManager
 
 # ----------------------------
 # App + Config
 # ----------------------------
+model_manager = ModelManager()
 app = FastAPI(title="iAssist AI Core", version="1.0")
 
-CONFIG = load_yaml("app/config/services.yaml")
+from app.config.settings import load_services_config
+
+CONFIG = load_services_config()
 R_CFG = CONFIG["services"]["r_analytics"]
 R_BASE_URL = R_CFG["base_url"]
 
@@ -213,6 +217,16 @@ async def handle_command(
             "request_id": getattr(request.state, "request_id", None),
             "mode": "async",
         },
+    }
+
+@app.post("/predict")
+def predict(data: dict = Body(...)):
+    amount = float(data.get("amount"))
+    category = model_manager.predict(amount)
+    return {
+        "amount": amount,
+        "predicted_category": category,
+        "model_path": model_manager.model_path
     }
 
 @app.get("/jobs/{job_id}")

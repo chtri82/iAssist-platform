@@ -3,12 +3,12 @@ from typing import Any, Dict, Optional, List
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from app.config.loader import load_yaml
+from app.config.settings import load_services_config, postgres_dsn
 
 class PostgresJobStore:
     def __init__(self):
-        config = load_yaml("app/config/services.yaml")
-        pg_cfg = config["services"]["postgres"]
+        cfg = load_services_config()
+        self.dsn = postgres_dsn(cfg)
 
         # psycopg2 DSN string
         self.dsn = (

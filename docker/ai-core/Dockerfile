@@ -15,6 +15,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Copy application code
 COPY app ./app
+COPY ../../shared ./shared
+
 
 EXPOSE 5000
 
