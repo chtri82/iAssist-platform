@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Any
+import pandas as pd
 
 @dataclass
 class FeatureRow:
@@ -8,6 +9,9 @@ class FeatureRow:
     hour: int
     day_of_week: int
     month: int
+
+def to_dataframe(fr: FeatureRow) -> pd.DataFrame:
+    return pd.DataFrame([to_dict(fr)])
 
 def build_features(amount: float, ts: datetime | None = None) -> FeatureRow:
     if ts is None:

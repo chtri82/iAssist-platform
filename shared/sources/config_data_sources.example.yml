@@ -1,0 +1,49 @@
+# ============================================================
+# iAssist Self-Training Data Sources (Safe, Approved APIs)
+# ============================================================
+
+finance:
+  description: "Financial and market data APIs (open or licensed)"
+  approved_domains:
+    - "api.nasdaq.com"             # Nasdaq Developer Portal
+    
+government_policy:
+  description: "Government, law, and policy datasets"
+  approved_domains:
+    "api.congress.gov"
+
+medical_health:
+  description: "Public health, biomedical, and pharmaceutical data"
+  approved_domains:
+    - "api.fda.gov"                # FDA open data
+
+education_research:
+  description: "Academic, research, and education APIs"
+  approved_domains:
+    - "dataverse.harvard.edu"      # Academic data repository
+
+social_media:
+  description: "Official developer APIs for social networks"
+  approved_domains:
+    - "api.github.com"             # GitHub developer API
+    - "en.wikipedia.org"           # MediaWiki/Wikipedia API
+
+home_environment:
+  description: "IoT, home automation, and environment data"
+  approved_domains:
+    - "api.weather.gov"
+
+science_technology:
+  description: "STEM, space, and innovation data APIs"
+  approved_domains:
+    - "api.nasa.gov"
+
+psychology_behavior:
+  description: "Behavioral and cognitive science datasets"
+  approved_domains:
+    - "data.unicef.org"
+
+animal_veterinary:
+  description: "Animal health and veterinary datasets"
+  approved_domains:
+    - "openvetscience.org"

@@ -1,22 +1,23 @@
 from typing import Dict, Any, Optional
 from app.contracts import OrchestratorContract
-from app.tools import ToolRegistry
 from app.tool_wrapper import LoggingToolWrapper
 
 
 class Orchestrator(OrchestratorContract):
-    def __init__(self, tools: ToolRegistry, job_store=None):
+    def __init__(self, tools, job=None, job_store_pg=None, approved_sources=None):
         self.tools = tools
-        self.job_store = job_store  # may be None in tests
+        self.job = job
+        self.job_store_pg = job_store_pg
+        self.approved_sources = approved_sources or {"version": 1, "sources": []}
 
     def _wrap(self, tool_name: str, context: Optional[Dict[str, Any]]):
         tool = self.tools.get(tool_name)
-        if not self.job_store:
-            return tool  # no logging if no job_store provided
+        if not self.job_store_pg:
+            return tool  # no logging if no job store provided
 
         request_id = (context or {}).get("request_id")
         job_id = (context or {}).get("job_id")
-        return LoggingToolWrapper(tool, self.job_store, tool_name, request_id=request_id, job_id=job_id)
+        return LoggingToolWrapper(tool, self.job_store_pg, tool_name, request_id=request_id, job_id=job_id)
 
     def process(self, user_input: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         text = (user_input or "").strip().lower()
@@ -42,6 +43,8 @@ class Orchestrator(OrchestratorContract):
                     "route": "forecast",
                     "request_id": (context or {}).get("request_id"),
                     "job_id": (context or {}).get("job_id"),
+                    # prefer not to expose full list in public responses:
+                    "approved_sources_count": len(self.approved_sources.get("sources", [])),
                 },
             }
 
@@ -56,6 +59,7 @@ class Orchestrator(OrchestratorContract):
                         "route": "summary",
                         "request_id": (context or {}).get("request_id"),
                         "job_id": (context or {}).get("job_id"),
+                        "approved_sources_count": len(self.approved_sources.get("sources", [])),
                     },
                 }
             return {
@@ -66,8 +70,10 @@ class Orchestrator(OrchestratorContract):
                     "route": "summary",
                     "request_id": (context or {}).get("request_id"),
                     "job_id": (context or {}).get("job_id"),
+                    "approved_sources_count": len(self.approved_sources.get("sources", [])),
                 },
             }
+
         return {
             "type": "text",
             "content": "Try: 'forecast' or 'summary'.",
@@ -76,5 +82,6 @@ class Orchestrator(OrchestratorContract):
                 "route": "help",
                 "request_id": (context or {}).get("request_id"),
                 "job_id": (context or {}).get("job_id"),
+                "approved_sources_count": len(self.approved_sources.get("sources", [])),
             },
         }

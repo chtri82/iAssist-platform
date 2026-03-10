@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, List
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from app.config.loader import load_yaml
+from shared.config.loader import load_yaml
 
 
 class PostgresJobStore:

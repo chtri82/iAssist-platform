@@ -7,7 +7,8 @@ from typing import Type, Optional
 import requests
 from fastapi import FastAPI, Body, BackgroundTasks, Request
 
-from app.config.loader import load_yaml
+from shared.sources.approved_sources import load_approved_sources
+from shared.config.settings import load_services_config
 from app.tools import ToolRegistry
 from app.public_tools import RForecastTool, RSummaryTool
 from app.orchestrator import Orchestrator as PublicOrchestrator
@@ -20,8 +21,6 @@ from app.model_loader import ModelManager
 model_manager = ModelManager(model_name="transaction_category_model")
 app = FastAPI(title="iAssist AI Core", version="1.0")
 
-from app.config.settings import load_services_config
-
 CONFIG = load_services_config()
 R_CFG = CONFIG["services"]["r_analytics"]
 R_BASE_URL = R_CFG["base_url"]
@@ -29,14 +28,14 @@ R_BASE_URL = R_CFG["base_url"]
 # ----------------------------
 # Tool Registry
 # ----------------------------
-registry = ToolRegistry()
-registry.register(RForecastTool(R_BASE_URL))
-registry.register(RSummaryTool(R_BASE_URL))
+tools = ToolRegistry()
+tools.register(RForecastTool(R_BASE_URL))
+tools.register(RSummaryTool(R_BASE_URL))
 
 # ----------------------------
 # Job Store (Postgres)
 # ----------------------------
-job_store = PostgresJobStore()
+job_store_pg = PostgresJobStore()
 
 def now():
     return datetime.now(timezone.utc)
@@ -75,11 +74,17 @@ def load_private_orchestrator_class() -> Optional[Type]:
 # ----------------------------
 PrivateOrchestrator = load_private_orchestrator_class()
 
-if PrivateOrchestrator:
-    orchestrator = PrivateOrchestrator()
-else:
-    print("[WARN] Using public orchestrator stub.")
-    orchestrator = PublicOrchestrator(registry, job_store=job_store)
+approved_sources = load_approved_sources()
+
+job = None  # optional; orchestrator can rely on context + job_store_pg
+
+OrchestratorClass = PrivateOrchestrator or PublicOrchestrator
+orchestrator = OrchestratorClass(
+    tools=tools,
+    job=job,
+    job_store_pg=job_store_pg,
+    approved_sources=approved_sources,
+)
 
 # Runtime guardrail
 required_keys = {"type", "content", "metadata"}
@@ -120,35 +125,37 @@ def normalize_job_row(row: dict) -> dict:
 # ----------------------------
 def run_job(job_id: str, user_input: str):
     start = now()
-    job_store.add_event(job_id, "Job started")
-    job_store.update(job_id, status="running", started_at=now())
+    job_store_pg.add_event(job_id, "Job started")
+    job_store_pg.update(job_id, status="running", started_at=now())
 
     # Cancel check before doing work
-    row = job_store.get(job_id)
+    row = job_store_pg.get(job_id)
     if row and row.get("cancel_requested"):
-        job_store.add_event(job_id, "Job cancelled before execution", level="warn")
-        job_store.update(job_id, status="cancelled", finished_at=now())
+        job_store_pg.add_event(job_id, "Job cancelled before execution", level="warn")
+        job_store_pg.update(job_id, status="cancelled", finished_at=now())
         return
 
     try:
-        result = orchestrator.process(user_input,
-            context={"request_id": row.get("input_json", {}).get("request_id") if row else None, "job_id": job_id},
-)
+        ctx = {
+        "request_id": row.get("input_json", {}).get("request_id") if row else None,
+        "job_id": job_id,
+        }
+        result = orchestrator.process(user_input, context=ctx)
 
         # Cancel check after execution (can't interrupt tool mid-flight yet)
-        row = job_store.get(job_id)
+        row = job_store_pg.get(job_id)
         if row and row.get("cancel_requested"):
-            job_store.add_event(job_id, "Job cancelled after execution", level="warn")
-            job_store.update(job_id, status="cancelled", finished_at=now())
+            job_store_pg.add_event(job_id, "Job cancelled after execution", level="warn")
+            job_store_pg.update(job_id, status="cancelled", finished_at=now())
             return
 
-        job_store.add_event(job_id, "Job succeeded", payload={"duration_s": (now() - start).total_seconds()})
-        job_store.update(job_id, status="succeeded", finished_at=now(), result_json=result)
+        job_store_pg.add_event(job_id, "Job succeeded", payload={"duration_s": (now() - start).total_seconds()})
+        job_store_pg.update(job_id, status="succeeded", finished_at=now(), result_json=result)
 
     except Exception as e:
-        job_store.add_event(job_id, "Job failed", level="error",
+        job_store_pg.add_event(job_id, "Job failed", level="error",
                             payload={"error": str(e), "duration_s": (now() - start).total_seconds()})
-        job_store.update(job_id, status="failed", finished_at=now(), error_text=str(e))
+        job_store_pg.update(job_id, status="failed", finished_at=now(), error_text=str(e))
 
 # ----------------------------
 # Routes
@@ -163,12 +170,12 @@ def capabilities():
     return {
         "orchestrator_module": impl,
         "private_intelligence_loaded": impl == "private_orchestrator",
-        "public_tools": registry.list(),
+        "public_tools": tools.list(),
     }
 
 @app.get("/tools")
 def list_tools():
-    return {"tools": registry.list()}
+    return {"tools": tools.list()}
 
 @app.get("/healthz")
 def healthz():
@@ -205,8 +212,8 @@ async def handle_command(
 
     job_id = str(uuid.uuid4())
     req_id = getattr(request.state, "request_id", None)
-    job_store.create(job_id, {"input": user_input, "request_id": req_id})
-    job_store.add_event(job_id, "Job queued")
+    job_store_pg.create(job_id, {"input": user_input, "request_id": req_id})
+    job_store_pg.add_event(job_id, "Job queued")
 
     background_tasks.add_task(run_job, job_id, user_input)
 
@@ -231,22 +238,22 @@ def predict(data: dict = Body(...)):
 
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str):
-    row = job_store.get(job_id)
+    row = job_store_pg.get(job_id)
     if not row:
         return {"ok": False, "error": "job_not_found", "job_id": job_id}
     return {"ok": True, "job": normalize_job_row(row)}
 
 @app.get("/jobs")
 def list_jobs(limit: int = 50):
-    rows = job_store.list_recent(limit=limit)
+    rows = job_store_pg.list_recent(limit=limit)
     return {"ok": True, "jobs": [normalize_job_row(r) for r in rows]}
 
 @app.get("/jobs/{job_id}/events")
 def job_events(job_id: str, limit: int = 200):
-    row = job_store.get(job_id)
+    row = job_store_pg.get(job_id)
     if not row:
         return {"ok": False, "error": "job_not_found", "job_id": job_id}
-    ev = job_store.list_events(job_id, limit=limit)
+    ev = job_store_pg.list_events(job_id, limit=limit)
     # serialize datetimes
     for e in ev:
         if e.get("ts"):
@@ -255,11 +262,11 @@ def job_events(job_id: str, limit: int = 200):
 
 @app.post("/jobs/{job_id}/cancel")
 def cancel_job(job_id: str):
-    ok = job_store.request_cancel(job_id)
+    ok = job_store_pg.request_cancel(job_id)
     if not ok:
         return {"ok": False, "error": "job_not_found", "job_id": job_id}
-    job_store.add_event(job_id, "Cancel requested", level="warn")
-    row = job_store.get(job_id)
+    job_store_pg.add_event(job_id, "Cancel requested", level="warn")
+    row = job_store_pg.get(job_id)
     return {"ok": True, "job": normalize_job_row(row) if row else None}
 
 @app.post("/models/reload")

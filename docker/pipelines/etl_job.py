@@ -5,10 +5,21 @@ import pandas as pd
 import psycopg2
 
 from shared.config.settings import load_services_config, postgres_dsn
+from shared.features.feature_builder import build_training_features_from_transactions
 
 MODEL_DIR = os.getenv("MODEL_DIR", "/models")
 FEATURE_DIR = os.path.join(MODEL_DIR, "features")
 os.makedirs(FEATURE_DIR, exist_ok=True)
+
+features_df = build_training_features_from_transactions(transactions_df)
+
+FEATURE_DIR = os.path.join(MODEL_DIR, "features")
+os.makedirs(FEATURE_DIR, exist_ok=True)
+
+path = os.path.join(FEATURE_DIR, "latest.parquet")
+features_df.to_parquet(path, index=False)
+
+print(f"✅ Wrote features parquet: {path} rows={len(features_df)}")
 
 
 def utc_now():
@@ -60,7 +71,6 @@ def write_latest_parquet(df: pd.DataFrame) -> str:
     latest_path = os.path.join(FEATURE_DIR, "latest.parquet")
     df.to_parquet(latest_path, index=False)
     return latest_path
-
 
 def main():
     df = extract_transactions()

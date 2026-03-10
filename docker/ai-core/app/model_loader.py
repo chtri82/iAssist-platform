@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import Optional, Dict, Any
 
@@ -6,7 +7,7 @@ import pandas as pd
 import psycopg2
 
 from shared.config.settings import load_services_config, postgres_dsn
-from shared.ml.features import build_features, to_dict
+from shared.ml.features import build_features, to_dataframe
 
 class ModelManager:
     def __init__(self, model_name: str = "transaction_category_model"):
@@ -60,10 +61,8 @@ class ModelManager:
             "active_version": self.active_version,
         }
 
-    def predict(self, amount: float) -> str:
-        if not self.model:
-            raise RuntimeError("Model not loaded")
-
-        fr = build_features(float(amount))
-        X = pd.DataFrame([to_dict(fr)])  # must match training feature columns
+    def predict(self, amount: float, ts: Optional[datetime] = None):
+        fr = build_features(amount=float(amount), ts=ts)
+        X = to_dataframe(fr)   # columns must match training
         return self.model.predict(X)[0]
+
